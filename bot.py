@@ -1,46 +1,54 @@
 import asyncio
 import logging
+
 from aiogram import Bot, Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from config import BOT_TOKEN
-from database import init_db
-from handlers import router
-from scheduler_tasks import start_scheduler
+from db import init_db
+from client import router as client_router
+from admin import router as admin_router
+from subscription import SubscriptionCheckMiddleware
+from notifications import check_and_send_reminders
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+BOT_TOKEN = "8991341125:AAE6BcsopFPb_IwhvQuVOzTNG3CMPEeggcM"
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
+async def on_startup(bot: Bot):
+    logger.info("Starting up...")
+    await init_db()
+    logger.info("Database initialized.")
+
+
 async def main():
-    """Запуск бота"""
-    # Инициализация базы данных
-    init_db()
-    logger.info("База данных инициализирована")
+    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    dp = Dispatcher()
 
-    # Создание бота и диспетчера
-    bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher(storage=MemoryStorage())
+    dp.startup.register(on_startup)
 
-    # Подключение обработчиков
-    dp.include_router(router)
+    dp.include_router(client_router)
+    dp.include_router(admin_router)
 
-    # Запуск планировщика напоминаний
-    start_scheduler(bot)
-    logger.info("Планировщик напоминаний запущен")
+    dp.message.middleware(SubscriptionCheckMiddleware(bot))
+    dp.callback_query.middleware(SubscriptionCheckMiddleware(bot))
 
-    # Удаление вебхука и запуск polling
-    await bot.delete_webhook(drop_pending_updates=True)
-    logger.info("Бот запущен!")
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(
+        check_and_send_reminders,
+        trigger="interval",
+        minutes=15,
+        args=(bot,),
+        id="reminder_check",
+        replace_existing=True,
+    )
+    scheduler.start()
 
-    try:
-        await dp.start_polling(bot)
-    finally:
-        await bot.session.close()
+    logger.info("Bot started polling...")
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
