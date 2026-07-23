@@ -1,4 +1,5 @@
-aiogram>=3.10.0           # фреймворк для Telegram ботов (асинхронный)
-sqlalchemy[asyncio]>=2.0.30  # ORM для работы с БД (асинхронная)
-apscheduler>=3.10.4       # планировщик для напоминаний
-aiofiles>=24.1.0          # работа с файлами (для логов)
+aiogram>=3.10.0
+sqlalchemy[asyncio]>=2.0.30
+aiosqlite>=0.20.0
+apscheduler>=3.10.4
+aiofiles>=24.1.0
