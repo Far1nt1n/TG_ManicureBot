@@ -1,0 +1,6 @@
+BOT_TOKEN = "8991341125:AAE6BcsopFPb_IwhvQuVOzTNG3CMPEeggcM"
+ADMIN_ID = 7787661259
+CHANNEL_USERNAME = "@manicure_test"
+DB_PATH = "sqlite+aiosqlite:///nail_bot.db"
+CANCEL_HOURS_BEFORE = 4
+BREAK_BETWEEN_SLOTS = 10
